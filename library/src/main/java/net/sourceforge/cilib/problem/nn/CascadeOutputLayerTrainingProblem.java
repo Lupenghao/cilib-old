@@ -15,6 +15,7 @@ import net.sourceforge.cilib.nn.architecture.visitors.CascadeVisitor;
 import net.sourceforge.cilib.nn.architecture.visitors.OutputErrorVisitor;
 import net.sourceforge.cilib.nn.NeuralNetwork;
 import net.sourceforge.cilib.problem.solution.MinimisationFitness;
+import net.sourceforge.cilib.problem.DifferentiableProblem;
 import net.sourceforge.cilib.type.StringBasedDomainRegistry;
 import net.sourceforge.cilib.type.types.container.Vector;
 import net.sourceforge.cilib.type.types.Numeric;
@@ -25,7 +26,7 @@ import net.sourceforge.cilib.type.types.Type;
  * the set of weights of the output layer in a cascade network. It treats the
  * means squared error of all the outputs as the fitness to be minimised.
  */
-public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem {
+public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem implements DifferentiableProblem {
 
     private ArrayList<Layer> activationCache;
     private int weightEvaluationCount;
@@ -77,7 +78,7 @@ public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem {
      * @return a new MinimizationFitness wrapping the MSE.
      */
     @Override
-    protected MinimisationFitness calculateFitness(Type solution) {
+    public MinimisationFitness calculateFitness(Type solution) {
 
         weightEvaluationCount += ((Vector) solution).size();
 
@@ -111,6 +112,66 @@ public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem {
         }
 
         return new MinimisationFitness(mse / (candidateLayer.size()*trainingSet.size()));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * The gradient is determined using the batch-learning rule.
+     */
+    @Override
+    public Vector getGradient(Vector solution) {
+
+        //set weights
+        Layer candidateLayer = neuralNetwork.getArchitecture().getLayers().get(neuralNetwork.getArchitecture().getNumLayers()-1);
+        int currentIndex = 0;
+        for (Neuron neuron : candidateLayer) {
+            Vector neuronWeights = neuron.getWeights();
+            int size = neuronWeights.size();
+            for (int j = 0; j < size; j++) {
+                neuronWeights.set(j, ((Vector) solution).get(currentIndex++));
+            }
+        }
+        
+        Vector gradient = Vector.fill(0.0, solution.size());
+
+        //calculate gradient
+        OutputErrorVisitor errorVisitor = new OutputErrorVisitor();
+        for (int curPattern = 0; curPattern < activationCache.size(); ++curPattern) {
+            Vector.Builder pGradientBuilder = Vector.newBuilder();
+
+            //Feed consolidated layers to new output layer.
+            //The receiving Neuron must ensure that it doesn't process more inputs
+            //than what it has weights for.
+            for (Neuron curNeuron : candidateLayer) {
+                curNeuron.calculateActivation(activationCache.get(curPattern));
+            }
+
+            //calculate mse
+            errorVisitor.setInput(trainingSet.getRow(curPattern));
+            errorVisitor.visit(neuralNetwork.getArchitecture());
+            for (int curOutput = 0; curOutput < errorVisitor.getOutput().size(); ++curOutput) {
+                //get negative of error
+                double error = -errorVisitor.getOutput().get(curOutput).doubleValue();
+
+                //get activation function gradient
+                double netInput = 0.0;
+                for (int curWeight = 0; curWeight < candidateLayer.get(curOutput).getWeights().size(); ++curWeight) {
+                    netInput += candidateLayer.get(curOutput).getWeights().doubleValueOf(curWeight)
+                                * activationCache.get(curPattern).get(curWeight).getActivation();
+                }
+                double afGradient = candidateLayer.get(curOutput).getActivationFunction().getGradient(netInput);
+
+                //calculate gradient for pattern
+                for (int curWeight = 0; curWeight < candidateLayer.get(curOutput).getWeights().size(); ++curWeight) {
+                    pGradientBuilder.add(error*afGradient*activationCache.get(curPattern).get(curWeight).getActivation());
+                }
+            }
+
+            gradient = gradient.subtract(pGradientBuilder.build());
+        }
+
+        return gradient;
     }
 
     /**

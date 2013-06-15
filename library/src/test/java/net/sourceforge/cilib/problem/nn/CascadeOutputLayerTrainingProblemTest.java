@@ -157,6 +157,55 @@ public class CascadeOutputLayerTrainingProblemTest {
     }
 
     @Test
+    public void testBasicCNOutputGradient() {
+        NeuralNetwork network = new NeuralNetwork();
+        network.getArchitecture().setArchitectureBuilder(new CascadeArchitectureBuilder());
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(2, new Linear()));
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(1, new Linear()));
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(1, new Linear()));
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(2, new Linear()));
+        StringBasedDomainRegistry domain = new StringBasedDomainRegistry();
+        domain.setDomainString("R(-3:3)");
+        PresetNeuronDomain domainProvider = new PresetNeuronDomain();
+        domainProvider.setWeightDomainPrototype(domain);
+        network.getArchitecture().getArchitectureBuilder().getLayerBuilder().setDomainProvider(domainProvider);
+        network.initialise();
+
+        Vector weights = Vector.of(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.0,0.0,0.0,
+                                   0.0,0.0,0.0,0.0,0.0,0.0,0.0);
+        network.setWeights(weights);
+
+        StandardPatternDataTable trainingSet = new StandardPatternDataTable();
+        Vector input = Vector.of(0.1, 0.2);
+        Vector output = Vector.of(0, 0);
+        StandardPattern pattern = new StandardPattern(input, output);
+        trainingSet.addRow(pattern);
+        input = Vector.of(0.2, 0.4);
+        pattern = new StandardPattern(input, output);
+        trainingSet.addRow(pattern);
+
+        CascadeOutputLayerTrainingProblem problem = new CascadeOutputLayerTrainingProblem();
+        problem.setTrainingSet(trainingSet);
+        problem.setNeuralNetwork(network);
+        problem.initialise();
+
+        Vector gradient = problem.getGradient(Vector.of(1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0));
+        assertEquals(10, gradient.size());
+        
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*1.0*0.1 - (0.2+0.4-1-0.2-0.46)*1.0*0.2, gradient.doubleValueOf(0), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*1.0*0.2 - (0.2+0.4-1-0.2-0.46)*1.0*0.4, gradient.doubleValueOf(1), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*1.0*(-1) - (0.2+0.4-1-0.2-0.46)*1.0*(-1), gradient.doubleValueOf(2), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*1.0*(-0.25) - (0.2+0.4-1-0.2-0.46)*1.0*(-0.2), gradient.doubleValueOf(3), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*1.0*(-0.635) - (0.2+0.4-1-0.2-0.46)*1.0*(-0.46), gradient.doubleValueOf(4), Maths.EPSILON);
+
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*2.0*0.1 - (0.2+0.4-1-0.2-0.46)*2.0*0.2, gradient.doubleValueOf(5), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*2.0*0.2 - (0.2+0.4-1-0.2-0.46)*2.0*0.4, gradient.doubleValueOf(6), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*2.0*(-1) - (0.2+0.4-1-0.2-0.46)*2.0*(-1), gradient.doubleValueOf(7), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*2.0*(-0.25) - (0.2+0.4-1-0.2-0.46)*2.0*(-0.2), gradient.doubleValueOf(8), Maths.EPSILON);
+        assertEquals(-(0.1+0.2-1-0.25-0.635)*2.0*(-0.635) - (0.2+0.4-1-0.2-0.46)*2.0*(-0.46), gradient.doubleValueOf(9), Maths.EPSILON);
+    }
+
+    @Test
     public void testDomain() {
         NeuralNetwork network = new NeuralNetwork();
         network.getArchitecture().setArchitectureBuilder(new CascadeArchitectureBuilder());
