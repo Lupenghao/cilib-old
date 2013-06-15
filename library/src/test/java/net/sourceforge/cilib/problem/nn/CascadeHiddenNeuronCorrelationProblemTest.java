@@ -196,6 +196,81 @@ public class CascadeHiddenNeuronCorrelationProblemTest {
     }
 
     @Test
+    public void testBasicCNGradient() {
+        NeuralNetwork network = new NeuralNetwork();
+        network.getArchitecture().setArchitectureBuilder(new CascadeArchitectureBuilder());
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(2, new Linear()));
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(1, new Linear()));
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(1, new Linear()));
+        network.getArchitecture().getArchitectureBuilder().addLayer(new LayerConfiguration(2, new Linear()));
+        StringBasedDomainRegistry domain = new StringBasedDomainRegistry();
+        domain.setDomainString("R(-3:3)");
+        PresetNeuronDomain domainProvider = new PresetNeuronDomain();
+        domainProvider.setWeightDomainPrototype(domain);
+        network.getArchitecture().getArchitectureBuilder().getLayerBuilder().setDomainProvider(domainProvider);
+        network.initialise();
+
+        Vector weights = Vector.of(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,
+                                   1.1,1.2,1.3,1.4,1.5,1.6,1.7);
+        network.setWeights(weights);
+
+        StandardPatternDataTable trainingSet = new StandardPatternDataTable();
+        Vector input = Vector.of(0.1, 0.2);
+        Vector output = Vector.of(0, 0);
+        StandardPattern pattern = new StandardPattern(input, output);
+        trainingSet.addRow(pattern);
+        input = Vector.of(0.2, 0.4);
+        pattern = new StandardPattern(input, output);
+        trainingSet.addRow(pattern);
+
+        CascadeHiddenNeuronCorrelationProblem problem = new CascadeHiddenNeuronCorrelationProblem();
+        problem.setTrainingSet(trainingSet);
+        problem.setNeuralNetwork(network);
+        Neuron neuron = new Neuron();
+        neuron.setActivationFunction(new Linear());
+        problem.setNeuron(neuron);
+        problem.initialise();
+
+        //activation function gradients are all 1
+        double dAF = 1.0;
+
+        //error
+        double eO1P1 = 1.777 - (1.5145);
+        double eO1P2 = 1.252 - (1.5145);
+        double eO2P1 = 2.5695 - (2.17575);
+        double eO2P2 = 1.782 - (2.17575);
+
+        //actvations
+        double aP1 = 0.1 +0.2 -1 -0.25 -0.635;
+        double aP2 = 0.2 +0.4 -1 -0.2 -0.46;
+        double aPm = (aP1+aP2)/2;
+
+        //correlation signs
+        double cO1 = ((aP1-aPm)*eO1P1 + (aP2-aPm)*eO1P2) < 0 ? -1 : 1;
+        double cO2 = ((aP1-aPm)*eO2P1 + (aP2-aPm)*eO2P2) < 0 ? -1 : 1;
+
+        //per-output derivatives
+        double dO1I1 = (cO1*eO1P1*0.1 + cO1*eO1P2*0.2)*dAF;
+        double dO1I2 = (cO1*eO1P1*0.2 + cO1*eO1P2*0.4)*dAF;
+        double dO1I3 = (cO1*eO1P1*(-1) + cO1*eO1P2*(-1))*dAF;
+        double dO1I4 = (cO1*eO1P1*(-0.25) + cO1*eO1P2*(-0.2))*dAF;
+        double dO1I5 = (cO1*eO1P1*(-0.635) + cO1*eO1P2*(-0.46))*dAF;
+        double dO2I1 = (cO2*eO2P1*0.1 + cO2*eO2P2*0.2)*dAF;
+        double dO2I2 = (cO2*eO2P1*0.2 + cO2*eO2P2*0.4)*dAF;
+        double dO2I3 = (cO2*eO2P1*(-1) + cO2*eO2P2*(-1))*dAF;
+        double dO2I4 = (cO2*eO2P1*(-0.25) + cO2*eO2P2*(-0.2))*dAF;
+        double dO2I5 = (cO2*eO2P1*(-0.635) + cO2*eO2P2*(-0.46))*dAF;
+        
+        Vector gradient = problem.getGradient(Vector.of(1.0, 1.0, 1.0, 1.0, 1.0));
+        assertEquals(5, gradient.size());
+        assertEquals(dO1I1 + dO2I1, gradient.doubleValueOf(0), Maths.EPSILON);
+        assertEquals(dO1I2 + dO2I2, gradient.doubleValueOf(1), Maths.EPSILON);
+        assertEquals(dO1I3 + dO2I3, gradient.doubleValueOf(2), Maths.EPSILON);
+        assertEquals(dO1I4 + dO2I4, gradient.doubleValueOf(3), Maths.EPSILON);
+        assertEquals(dO1I5 + dO2I5, gradient.doubleValueOf(4), Maths.EPSILON);
+    }
+
+    @Test
     public void testDomain() {
         NeuralNetwork network = new NeuralNetwork();
         network.getArchitecture().setArchitectureBuilder(new CascadeArchitectureBuilder());
