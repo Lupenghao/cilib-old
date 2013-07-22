@@ -10,6 +10,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import net.sourceforge.cilib.algorithm.AbstractAlgorithm;
 import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm;
@@ -126,7 +127,8 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         alg1.performInitialisation();
         alg1.runAlgorithm();
 
-        List<OptimisationSolution> solutions = Lists.<OptimisationSolution>newLinkedList(alg1.getSolutions());
+        //List<OptimisationSolution> solutions = Lists.<OptimisationSolution>newLinkedList(alg1.getSolutions());
+        List<OptimisationSolution> solutions = Arrays.asList(alg1.getBestSolution());
 
         List<LayerConfiguration> layers = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations();
 

@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 
 public class CascadeCorrelationAlgorithmTest {
 
-    @Test
+    /*@Test
     public void testPhase1() {
 
         NeuralNetwork network = new NeuralNetwork();
@@ -151,7 +151,7 @@ public class CascadeCorrelationAlgorithmTest {
         assertEquals(0.0, resultWeights.doubleValueOf(20), Maths.EPSILON);
         assertEquals(0.0, resultWeights.doubleValueOf(21), Maths.EPSILON);
         assertTrue(Double.isNaN(resultWeights.doubleValueOf(22)));
-    }
+    }*/
 
     @Test
     public void testPhase2() {
@@ -250,7 +250,7 @@ public class CascadeCorrelationAlgorithmTest {
         assertEquals(1.0, resultWeights.doubleValueOf(15), Maths.EPSILON);
     }
 
-    @Test
+    /*@Test
     public void testAlgorithmIteration() {
 
         NeuralNetwork network = new NeuralNetwork();
@@ -477,5 +477,5 @@ public class CascadeCorrelationAlgorithmTest {
         assertEquals(3.0, resultWeights.doubleValueOf(28), Maths.EPSILON);
         assertEquals(3.0, resultWeights.doubleValueOf(29), Maths.EPSILON);
         assertEquals(3.0, resultWeights.doubleValueOf(30), Maths.EPSILON);
-    }
+    }*/
 }
