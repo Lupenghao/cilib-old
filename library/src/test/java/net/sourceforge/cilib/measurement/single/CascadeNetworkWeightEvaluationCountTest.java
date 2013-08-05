@@ -115,7 +115,7 @@ public class CascadeNetworkWeightEvaluationCountTest {
         network.getArchitecture().getArchitectureBuilder().getLayerBuilder().setDomainProvider(domainProvider);
         network.setOperationVisitor(new CascadeVisitor());
         network.initialise();
-        
+
         final NNTrainingProblem problem = mock(NNTrainingProblem.class);
         when(problem.getTrainingSet()).thenReturn(new StandardPatternDataTable());
         when(problem.getValidationSet()).thenReturn(new StandardPatternDataTable());
@@ -133,7 +133,7 @@ public class CascadeNetworkWeightEvaluationCountTest {
         assertEquals(0, measurement1.getValue(cascadeAlg).doubleValue(), Maths.EPSILON);
         assertEquals(0, measurement2.getValue(cascadeAlg).doubleValue(), Maths.EPSILON);
         assertEquals(0, measurement3.getValue(cascadeAlg).doubleValue(), Maths.EPSILON);
-        
+
         cascadeAlg.phase2();
 
         assertEquals(120120, measurement1.getValue(cascadeAlg).doubleValue(), Maths.EPSILON);

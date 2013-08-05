@@ -10,6 +10,8 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import net.sourceforge.cilib.algorithm.AbstractAlgorithm;
+import net.sourceforge.cilib.algorithm.initialisation.ClonedPopulationInitialisationStrategy;
+import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm;
 import net.sourceforge.cilib.io.pattern.StandardPattern;
 import net.sourceforge.cilib.io.StandardPatternDataTable;
 import net.sourceforge.cilib.math.Maths;
@@ -23,6 +25,7 @@ import net.sourceforge.cilib.problem.nn.NNTrainingProblem;
 import net.sourceforge.cilib.problem.solution.MaximisationFitness;
 import net.sourceforge.cilib.problem.solution.MinimisationFitness;
 import net.sourceforge.cilib.problem.solution.OptimisationSolution;
+import net.sourceforge.cilib.pso.particle.StandardParticle;
 import net.sourceforge.cilib.type.types.container.Vector;
 import net.sourceforge.cilib.type.StringBasedDomainRegistry;
 import org.junit.Test;
@@ -49,8 +52,6 @@ public class CascadeCorrelationAlgorithmTest {
         network.getArchitecture().getArchitectureBuilder().getLayerBuilder().setDomainProvider(domainProvider);
         network.setOperationVisitor(new CascadeVisitor());
         network.initialise();
-
-        network.setWeights(Vector.of(0.0,0.0,0.0,0.0,0.0,0.0));
 
         StandardPatternDataTable trainingSet = new StandardPatternDataTable();
         Vector input = Vector.of(0.1, 0.2);
@@ -82,6 +83,9 @@ public class CascadeCorrelationAlgorithmTest {
         cascadeAlg.setOptimisationProblem(problem);
         cascadeAlg.setPhase1Algorithm(p1Alg);
         cascadeAlg.performInitialisation();
+
+        network.setWeights(Vector.of(0.0,0.0,0.0,0.0,0.0,0.0));
+
         cascadeAlg.phase1();
 
         List<Layer> resultLayers = network.getArchitecture().getLayers();
@@ -181,8 +185,12 @@ public class CascadeCorrelationAlgorithmTest {
         when(problem.getGeneralisationSet()).thenReturn(new StandardPatternDataTable());
         when(problem.getNeuralNetwork()).thenReturn(network);
 
+        ClonedPopulationInitialisationStrategy popInitStrategy = new ClonedPopulationInitialisationStrategy();
+        popInitStrategy.setEntityType(new StandardParticle());
+
         final AbstractAlgorithm p2Alg = mock(AbstractAlgorithm.class);
-        final AbstractAlgorithm p2AlgClone = mock(AbstractAlgorithm.class);
+        final SinglePopulationBasedAlgorithm p2AlgClone = mock(SinglePopulationBasedAlgorithm.class);
+        when(p2AlgClone.getInitialisationStrategy()).thenReturn(popInitStrategy);
         when(p2Alg.getClone()).thenReturn(p2AlgClone);
         when(p2AlgClone.getBestSolution()).thenReturn(new OptimisationSolution(Vector.of(1.0, 1.0, 1.0, 1.0, 1.0, 1.0), new MinimisationFitness(0.0)));
         doNothing().when(p2AlgClone).performInitialisation();
@@ -285,8 +293,12 @@ public class CascadeCorrelationAlgorithmTest {
         doNothing().when(p1AlgClone).performInitialisation();
         doNothing().when(p1AlgClone).runAlgorithm();
 
+        ClonedPopulationInitialisationStrategy popInitStrategy = new ClonedPopulationInitialisationStrategy();
+        popInitStrategy.setEntityType(new StandardParticle());
+
         final AbstractAlgorithm p2Alg = mock(AbstractAlgorithm.class);
-        final AbstractAlgorithm p2AlgClone = mock(AbstractAlgorithm.class);
+        final SinglePopulationBasedAlgorithm p2AlgClone = mock(SinglePopulationBasedAlgorithm.class);
+        when(p2AlgClone.getInitialisationStrategy()).thenReturn(popInitStrategy);
         when(p2Alg.getClone()).thenReturn(p2AlgClone);
         when(p2AlgClone.getBestSolution()).thenReturn(new OptimisationSolution(Vector.of(3.0, 3.0, 3.0, 3.0, 3.0, 3.0), new MinimisationFitness(0.0)));
         doNothing().when(p2AlgClone).performInitialisation();
