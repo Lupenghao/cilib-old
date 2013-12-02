@@ -66,4 +66,9 @@ public class Property<T extends Type> {
      */
     public final static Property<TypeList> NICHE_DETECTION_FITNESSES = new Property();
 
+    /**
+     * Gradient descent properties
+     */
+    public final static Property<StructuredType> PREVIOUS_GRADIENT = new Property();
+
 }
