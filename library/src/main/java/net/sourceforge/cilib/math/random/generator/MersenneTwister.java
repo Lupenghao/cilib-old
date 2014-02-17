@@ -36,7 +36,7 @@ package net.sourceforge.cilib.math.random.generator;
  * Comment text ripped from GSL.
  *
  */
-class MersenneTwister {
+public class MersenneTwister {
 
     private static final long serialVersionUID = -4165908582605023476L;
     private final long seed;

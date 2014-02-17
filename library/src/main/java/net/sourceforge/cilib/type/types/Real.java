@@ -156,4 +156,8 @@ public class Real implements Numeric {
     public Bounds getBounds() {
         return this.bounds;
     }
+
+    public void setValue(double newValue) {
+        value = newValue;
+    }
 }
