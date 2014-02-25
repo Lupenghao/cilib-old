@@ -90,12 +90,17 @@ public class SeededStratifiedWindows implements DataOperator {
             selectedClass.addRow(curPattern);
         }
 
+        //TODO: remove this sanity check
+        if (classes.size() > 50)
+            throw new IllegalStateException("Sanity check: data set is producing too many classes");
+
         //create empty windows
         ArrayList<StandardPatternDataTable> windows = new ArrayList<StandardPatternDataTable>();
         for (int curWindow = 0; curWindow < numOfWindows; curWindow++) {
             windows.add(new StandardPatternDataTable());
         }
 
+        //divide each class amongst windows
         int windowCounter = 0;
         for (StandardPatternDataTable curClass : classes.values()) {
             //int proportion = (int) Math.floor(((double)curClass.size() / (double)table.size()) * curClass.size());
@@ -105,6 +110,21 @@ public class SeededStratifiedWindows implements DataOperator {
                 windows.get(windowCounter % windows.size()).addRow(curClass.getRow(selected));
                 curClass.removeRow(selected);
                 windowCounter++;
+            }
+        }
+
+        //TODO: remove sanity check
+        for (int curWindow = 0; curWindow < numOfWindows; curWindow++) {
+            int expectedSize = baseWindowSize + (curWindow < nrOfLargeWindows?1:0);
+            if (windows.get(curWindow).size() != expectedSize)
+                throw new IllegalStateException("Sanity check: window does not contain the correct amount of patterns");
+        }
+
+        //concatenate all the windows into one data set
+        StandardPatternDataTable newTable = new StandardPatternDataTable();
+        for (StandardPatternDataTable curWindow : windows) {
+            for (StandardPattern curPattern : curWindow) {
+                newTable.addRow(curPattern);
             }
         }
 
@@ -200,7 +220,7 @@ public class SeededStratifiedWindows implements DataOperator {
         }*/
 
         //TODO: fix this
-        return table;
+        return newTable;
     }
 
     public void setSeed(long seed) {

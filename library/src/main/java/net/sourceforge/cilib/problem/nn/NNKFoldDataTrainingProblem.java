@@ -71,7 +71,7 @@ public class NNKFoldDataTrainingProblem extends NNTrainingProblem {
             dataTableBuilder.buildDataTable();
             DataTable dataTable = dataTableBuilder.getDataTable();
 
-            initialShuffler.operate(dataTable);
+            dataTable = initialShuffler.operate(dataTable);
 
             int windowSize = dataTable.size()/numOfWindows;
             int windowsWithExtra = dataTable.size() % numOfWindows;
