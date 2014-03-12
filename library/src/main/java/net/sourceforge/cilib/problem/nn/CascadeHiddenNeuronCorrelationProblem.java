@@ -218,4 +218,37 @@ public class CascadeHiddenNeuronCorrelationProblem extends NNTrainingProblem {
     public int getWeightEvaluationCount() {
         return weightEvaluationCount;
     }
+
+    public Vector calculateCovarianceVector(Vector solution) {
+        neuron.setWeights(solution);
+
+        //calculate activations
+        double[] activations = new double[trainingSet.size()];
+        for (int curPattern = 0; curPattern < activationCache.size(); ++curPattern) {
+            //Feed consolidated layers to new neuron.
+            //The receiving Neuron must ensure that it doesn't process more inputs
+            //than what it has weights for.
+            activations[curPattern] = neuron.calculateActivation(activationCache.get(curPattern));
+        }
+
+        //calculate means
+        double totalActivation = activations[0];
+        for (int curPattern = 1; curPattern < trainingSet.size(); ++curPattern) {
+            totalActivation += activations[curPattern];
+        }
+        double meanActivation = totalActivation / trainingSet.size();
+
+        //calculate correlation
+        Vector correlation = errorMeans.getClone();
+        for (int curOutput = 0; curOutput < errorMeans.size(); ++curOutput) {
+            double total = 0.0;
+            for (int curPattern = 0; curPattern < trainingSet.size(); ++curPattern) {
+                total += (activations[curPattern] - meanActivation)
+                         * (errorCache.get(curPattern).get(curOutput).doubleValue() - errorMeans.get(curOutput).doubleValue());
+            }
+            correlation.setReal(curOutput,total);
+        }
+
+        return correlation;
+    }
 }
