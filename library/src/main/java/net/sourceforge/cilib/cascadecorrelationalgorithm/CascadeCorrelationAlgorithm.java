@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.sourceforge.cilib.algorithm.AbstractAlgorithm;
 import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm;
+import net.sourceforge.cilib.entity.Entity;
+import net.sourceforge.cilib.entity.Property;
 import net.sourceforge.cilib.entity.initialisation.MaskedInitialisationStrategy;
 import net.sourceforge.cilib.nn.architecture.builder.CascadeArchitectureBuilder;
 import net.sourceforge.cilib.nn.architecture.builder.LayerConfiguration;
@@ -39,6 +41,7 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
     private CascadeOutputLayerTrainingProblem phase2Problem;
     private Fitness trackedFitness;
     private Neuron neuronPrototype;
+	private ArrayList<Entity> oldPopulation = null;
 
     public CascadeCorrelationAlgorithm() {
         neuronPrototype = new Neuron();
@@ -182,10 +185,45 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
 		}
         
         SinglePopulationBasedAlgorithm alg2 = (SinglePopulationBasedAlgorithm) phase2Algorithm.getClone();
-		((AbstractParticle) alg2.getInitialisationStrategy().getEntityType()).setPositionInitialisationStrategy(new MaskedInitialisationStrategy(maskBuilder.build()));
-
         alg2.setOptimisationProblem(phase2Problem);
         alg2.performInitialisation();
+
+        if (oldPopulation != null) {
+		    Vector mask = maskBuilder.build();
+		    fj.data.List<Entity> newPopulation = (fj.data.List<Entity>) alg2.getTopology();
+		    for (int curEntity = 0; curEntity < newPopulation.length(); curEntity++) {
+			    Vector oldVector = (Vector) oldPopulation.get(curEntity).getPosition();
+			    Vector newVector = (Vector) newPopulation.index(curEntity).getPosition();
+			    int oldElement = 0;
+			    for (int curElement = 0; curElement < mask.size(); curElement++) {
+				    if (!Double.isNaN(mask.doubleValueOf(curElement))) {
+					    newVector.setReal(curElement, oldVector.doubleValueOf(oldElement));
+				    }
+			    }
+			    newPopulation.index(curEntity).setPosition(newVector);
+
+			    oldVector = (Vector) oldPopulation.get(curEntity).get(Property.BEST_POSITION);
+			    newVector = (Vector) newPopulation.index(curEntity).get(Property.BEST_POSITION);
+			    oldElement = 0;
+			    for (int curElement = 0; curElement < mask.size(); curElement++) {
+				    if (!Double.isNaN(mask.doubleValueOf(curElement))) {
+					    newVector.setReal(curElement, oldVector.doubleValueOf(oldElement));
+				    }
+			    }
+			    newPopulation.index(curEntity).put(Property.BEST_POSITION, newVector);
+
+			    oldVector = (Vector) oldPopulation.get(curEntity).get(Property.VELOCITY);
+			    newVector = (Vector) newPopulation.index(curEntity).get(Property.VELOCITY);
+			    oldElement = 0;
+			    for (int curElement = 0; curElement < mask.size(); curElement++) {
+				    if (!Double.isNaN(mask.doubleValueOf(curElement))) {
+					    newVector.setReal(curElement, oldVector.doubleValueOf(oldElement));
+				    }
+			    }
+			    newPopulation.index(curEntity).put(Property.VELOCITY, newVector);
+		    }
+        }
+		
         alg2.runAlgorithm();
 
         OptimisationSolution solution = alg2.getBestSolution();
@@ -198,6 +236,11 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         }
         
         network.setWeights(trackedWeights);
+
+		oldPopulation = new ArrayList<Entity>();
+		for (Entity curEntity : (fj.data.List<Entity>) alg2.getTopology()) {
+			oldPopulation.add(curEntity.getClone());
+		}
     }
 
     /**
