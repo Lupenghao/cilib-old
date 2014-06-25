@@ -90,6 +90,21 @@ public class NNKFoldDataTrainingProblem extends NNTrainingProblem {
                 windows.add(curTable);
             }
 
+            //reorganise windows
+            ArrayList<DataTable> orderedWindows = new ArrayList<DataTable>();
+            int split3 = windows.size()/3;
+            int splitR = windows.size()%3;
+            int split1 = split3 + ((splitR > 0) ? 1 : 0);
+            int split2 = split3 + ((splitR > 1) ? 1 : 0);
+            for (int i = 0; i < split1; i++) {
+                orderedWindows.add(windows.get(i));
+                if (i < split2)
+                    orderedWindows.add(windows.get(split1 + i));
+                if (i < split3)
+                    orderedWindows.add(windows.get(split1 + split2 + i));
+            }
+            windows = orderedWindows;
+
             int trainingSize = (int) Math.round(numOfWindows * trainingSetPercentage);
             int validationSize = (int) Math.round(numOfWindows * validationSetPercentage);
             int generalisationSize = numOfWindows - trainingSize - validationSize;
