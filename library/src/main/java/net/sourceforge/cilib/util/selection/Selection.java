@@ -28,8 +28,8 @@ public final class Selection<T> implements PartialSelection<T> {
 
     // Check array size
     private static <T> Object[] copyOfInternal(Iterable<T> iterable) {
-        checkArgument(Iterables.size(iterable) >= 1, "Attempting to create a "
-                + "selection on an empty collection is not valid.");
+        //checkArgument(Iterables.size(iterable) >= 1, "Attempting to create a "
+        //        + "selection on an empty collection is not valid.");
         List<T> list = Lists.newArrayList(iterable);
         return list.toArray();
     }

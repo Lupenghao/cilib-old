@@ -11,8 +11,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import net.sourceforge.cilib.algorithm.AbstractAlgorithm;
+import net.sourceforge.cilib.algorithm.initialisation.ClonedPopulationInitialisationStrategy;
+import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm;
+import net.sourceforge.cilib.controlparameter.ControlParameter;
+import net.sourceforge.cilib.controlparameter.ConstantControlParameter;
+import net.sourceforge.cilib.ec.Individual;
+import net.sourceforge.cilib.entity.Entity;
+import net.sourceforge.cilib.entity.Property;
+import net.sourceforge.cilib.entity.comparator.AscendingFitnessComparator;
+import net.sourceforge.cilib.entity.initialisation.CovarianceInitialisationStrategy;
+import net.sourceforge.cilib.math.random.generator.Rand;
 import net.sourceforge.cilib.nn.architecture.builder.CascadeArchitectureBuilder;
 import net.sourceforge.cilib.nn.architecture.builder.LayerConfiguration;
 import net.sourceforge.cilib.nn.architecture.visitors.CascadeVisitor;
@@ -37,12 +48,17 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
     private CascadeOutputLayerTrainingProblem phase2Problem;
     private Fitness trackedFitness;
     private Neuron neuronPrototype;
+    private Vector covarianceVector;
+	private ArrayList<Entity> oldPopulation = null;
+    private ControlParameter survivalRatio;
 
     public CascadeCorrelationAlgorithm() {
         neuronPrototype = new Neuron();
         trackedFitness = InferiorFitness.instance();
         phase1Problem = new CascadeHiddenNeuronCorrelationProblem();
         phase2Problem = new CascadeOutputLayerTrainingProblem();
+        survivalRatio = ConstantControlParameter.of(0.5);
+        oldPopulation = new ArrayList<>();
     }
 
     public CascadeCorrelationAlgorithm(CascadeCorrelationAlgorithm rhs) {
@@ -52,6 +68,7 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         phase2Algorithm = rhs.phase2Algorithm.getClone();
         phase1Problem = rhs.phase1Problem.getClone();
         phase2Problem = rhs.phase2Problem.getClone();
+        survivalRatio = rhs.survivalRatio.getClone();
     }
 
     /**
@@ -82,6 +99,12 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         phase2Problem.setValidationSet(problem.getValidationSet());
         phase2Problem.setGeneralisationSet(problem.getGeneralisationSet());
         phase2Problem.setNeuralNetwork(network);
+        phase2Problem.initialise();
+
+        covarianceVector = Vector.newBuilder().copyOf(phase2Problem.getDomain().getBuiltRepresentation()).build();
+        for (int curElement = 0; curElement < covarianceVector.size(); curElement++) {
+            covarianceVector.setReal(curElement, Double.NaN);
+        }
     }
 
     /**
@@ -124,6 +147,8 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
 
         List<LayerConfiguration> layers = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations();
 
+        Vector covariance = phase1Problem.calculateCovarianceVector((Vector) solutions.get(0).getPosition());
+
         //expand weight vector
         int consolidatedLayerSize = 0;
         int insertionIndex = 0;
@@ -146,7 +171,17 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
                 trackedWeights.insert(insertionIndex, Real.valueOf(Double.NaN));
             }
 
+            covarianceVector.insert((curOutput+1)*(consolidatedLayerSize+1)-1, covariance.get(curOutput));
+            for (Entity curEntity : oldPopulation) {
+                ((Vector) curEntity.getPosition()).insert((curOutput+1)*(consolidatedLayerSize+1)-1, Real.valueOf(Double.NaN));
+            }
+
             insertionIndex += solutions.size() + consolidatedLayerSize;
+        }
+
+        //initialise oldpopulation
+        for (Entity curEntity : oldPopulation) {
+            (new CovarianceInitialisationStrategy(covarianceVector,false)).initialise(Property.CANDIDATE_SOLUTION, curEntity);
         }
         
         //expand neural network
@@ -167,12 +202,27 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         NeuralNetwork network = problem.getNeuralNetwork();
         Vector trackedWeights = network.getWeights();
         
-        AbstractAlgorithm alg2 = (AbstractAlgorithm) phase2Algorithm.getClone();
-        
         phase2Problem.initialise();
 
+        SinglePopulationBasedAlgorithm alg2 = (SinglePopulationBasedAlgorithm) phase2Algorithm.getClone();
         alg2.setOptimisationProblem(phase2Problem);
+        ((CovarianceInitialisationStrategy) ((Individual) ((ClonedPopulationInitialisationStrategy) 
+            alg2.getInitialisationStrategy())
+            .getEntityType()).getInitialisationStrategy()).setMask(covarianceVector);
         alg2.performInitialisation();
+
+        if (oldPopulation.size() > 0) {
+		    ArrayList<Entity> newPopulation = Lists.newArrayList(alg2.getTopology());
+		    for (int curCount = 0; curCount < oldPopulation.size(); curCount++) {
+                int index = (int) Math.floor(Rand.nextDouble()*newPopulation.size());
+                newPopulation.remove(index);
+            }
+            for (Entity curEntity : oldPopulation) {
+                newPopulation.add(curEntity);
+            }
+            alg2.setTopology(fj.data.Java.<Entity>ArrayList_List().f(newPopulation));
+        }
+        
         alg2.runAlgorithm();
 
         OptimisationSolution solution = alg2.getBestSolution();
@@ -182,6 +232,13 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         for (int curElement = 0; curElement < newWeights.size(); ++curElement) {
             trackedWeights.set(trackedWeights.size()-1-curElement,
                              newWeights.get(newWeights.size()-1-curElement));
+        }
+
+        oldPopulation.clear();
+        java.util.List<Entity> tmp = Lists.newArrayList(alg2.getTopology());
+        Collections.sort(tmp, new AscendingFitnessComparator<Entity>());
+        for (int curCount = 0; curCount < tmp.size()*survivalRatio.getParameter(); curCount++) {
+            oldPopulation.add(tmp.get(tmp.size() - 1 - curCount).getClone());
         }
         
         network.setWeights(trackedWeights);
@@ -275,5 +332,9 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
      */
     public int getPhase2WeightEvaluationCount() {
         return phase2Problem.getWeightEvaluationCount();
+    }
+
+    public void setSurvivalRatio(ControlParameter survivalRatio) {
+        this.survivalRatio = survivalRatio;
     }
 }

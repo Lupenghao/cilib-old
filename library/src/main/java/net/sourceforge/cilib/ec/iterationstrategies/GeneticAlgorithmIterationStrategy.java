@@ -75,7 +75,7 @@ public class GeneticAlgorithmIterationStrategy extends AbstractIterationStrategy
 
         // Perform crossover: Allow each individual to create an offspring
         List<Individual> crossedOver = Lists.newArrayList();
-        for (int i = 0, n = populationSize; i < n; i++) {
+        for (int i = 0, n = populationSize/2; i < n; i++) {
             crossedOver.addAll(crossover.crossover(ec.getTopology()));
         }
 
