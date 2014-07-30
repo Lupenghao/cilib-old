@@ -10,7 +10,7 @@ import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm
 import net.sourceforge.cilib.entity.Entity;
 import net.sourceforge.cilib.nn.NeuralNetwork;
 import net.sourceforge.cilib.nn.architecture.builder.LayerConfiguration;
-import net.sourceforge.cilib.problem.nn.NNDataTrainingProblem;
+import net.sourceforge.cilib.problem.nn.NNTrainingProblem;
 import net.sourceforge.cilib.pso.dynamic.DynamicParticle;
 import net.sourceforge.cilib.pso.particle.Particle;
 import net.sourceforge.cilib.type.types.container.Vector;
@@ -47,7 +47,7 @@ public class CascadeNetworkExpansionReactionStrategy<E extends SinglePopulationB
      */
     @Override
     public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm) {
-        NNDataTrainingProblem problem = (NNDataTrainingProblem)algorithm.getOptimisationProblem();
+        NNTrainingProblem problem = (NNTrainingProblem)algorithm.getOptimisationProblem();
         NeuralNetwork network = problem.getNeuralNetwork();
 
         //add one new neuron to a new hidden layer
