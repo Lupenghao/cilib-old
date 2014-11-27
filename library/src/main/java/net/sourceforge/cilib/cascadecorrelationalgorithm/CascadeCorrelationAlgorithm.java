@@ -148,6 +148,12 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
             }
         }
 
+        //reset bias weight in output layer
+        if (layers.get(0).isBias()) {
+            int index = layers.get(0).getSize();
+            trackedWeights.setReal(insertionIndex + index, Double.NaN);
+        }
+
         insertionIndex += consolidatedLayerSize;
         for (int curOutput = 0; curOutput < layers.get(layers.size()-1).getSize(); ++curOutput) {
             for (int curSolution = 0; curSolution < solutions.size(); ++curSolution) {
@@ -156,7 +162,7 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
 
             insertionIndex += solutions.size() + consolidatedLayerSize;
         }
-        
+     
         //expand neural network
         LayerConfiguration targetLayerConfiguration = new LayerConfiguration(solutions.size(), neuronPrototype.getActivationFunction(), false);
         network.getArchitecture().getArchitectureBuilder().addLayer(layers.size()-1, targetLayerConfiguration);

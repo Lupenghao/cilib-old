@@ -24,6 +24,7 @@ import net.sourceforge.cilib.type.types.container.Vector;
  */
 public class GradientDescentBehaviour extends AbstractBehaviour {
 
+    private double sign;
     private double stepSize;
     private double momentum;
 
@@ -31,6 +32,7 @@ public class GradientDescentBehaviour extends AbstractBehaviour {
      * Default constructor assigns standard position and velocity provider.
      */
     public GradientDescentBehaviour() {
+        sign = -1;
         stepSize = 0.9;
         momentum = 0.5;
     }
@@ -43,6 +45,7 @@ public class GradientDescentBehaviour extends AbstractBehaviour {
     public GradientDescentBehaviour(GradientDescentBehaviour copy) {
         super(copy);
 
+        this.sign = copy.sign;
         this.stepSize = copy.stepSize;
         this.momentum = copy.momentum;
     }
@@ -61,8 +64,6 @@ public class GradientDescentBehaviour extends AbstractBehaviour {
     @Override
     public Entity performIteration(Entity entity) {
 
-        double sign = (AbstractAlgorithm.get().getOptimisationProblem() instanceof Maximise) ? 1 : -1;
-
         Vector curPosition = (Vector) entity.getPosition();
         Vector oldVelocity = (Vector) entity.get(Property.VELOCITY);
         Vector newGradient = ((DifferentiableProblem) AbstractAlgorithm.get().getOptimisationProblem()).getGradient(curPosition);
@@ -78,12 +79,18 @@ public class GradientDescentBehaviour extends AbstractBehaviour {
         }
         entity.put(Property.PREVIOUS_SOLUTION, entity.getPosition());
         entity.put(Property.CANDIDATE_SOLUTION, newPosition);
+        entity.put(Property.BEST_POSITION, newPosition);
 
         boundaryConstraint.enforce(entity);
         
         entity.updateFitness(fitnessCalculator.getFitness(entity));
+        entity.put(Property.BEST_FITNESS, entity.getFitness());
         
         return entity;
+    }
+
+    public void setSign(double sign) {
+        this.sign = sign;
     }
 
     public void setStepSize(double stepSize) {

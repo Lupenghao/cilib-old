@@ -152,7 +152,7 @@ public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem impleme
             errorVisitor.visit(neuralNetwork.getArchitecture());
             for (int curOutput = 0; curOutput < errorVisitor.getOutput().size(); ++curOutput) {
                 //get negative of error
-                double error = -errorVisitor.getOutput().get(curOutput).doubleValue();
+                double error = errorVisitor.getOutput().get(curOutput).doubleValue();
 
                 //get activation function gradient
                 double netInput = 0.0;
@@ -164,11 +164,11 @@ public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem impleme
 
                 //calculate gradient for pattern
                 for (int curWeight = 0; curWeight < candidateLayer.get(curOutput).getWeights().size(); ++curWeight) {
-                    pGradientBuilder.add(error*afGradient*activationCache.get(curPattern).get(curWeight).getActivation());
+                    pGradientBuilder.add(-2.0*error*afGradient*activationCache.get(curPattern).get(curWeight).getActivation());
                 }
             }
 
-            gradient = gradient.subtract(pGradientBuilder.build());
+            gradient = gradient.plus(pGradientBuilder.build());
         }
 
         return gradient;
