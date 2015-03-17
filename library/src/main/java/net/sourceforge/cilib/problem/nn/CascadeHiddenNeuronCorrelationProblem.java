@@ -191,7 +191,7 @@ public class CascadeHiddenNeuronCorrelationProblem extends NNTrainingProblem imp
                             * afGradients[curPattern] * activationCache.get(curPattern).get(curWeight).getActivation();
                 }
             }
-            gradientBuilder.add(gradient);
+            gradientBuilder.add(gradient / trainingSet.size());
         }
 
         return gradientBuilder.build();

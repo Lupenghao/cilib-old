@@ -171,7 +171,7 @@ public class CascadeOutputLayerTrainingProblem extends NNTrainingProblem impleme
             gradient = gradient.plus(pGradientBuilder.build());
         }
 
-        return gradient;
+        return gradient.divide(activationCache.size());
     }
 
     /**
