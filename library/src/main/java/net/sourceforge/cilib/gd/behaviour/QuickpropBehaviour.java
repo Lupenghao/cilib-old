@@ -27,6 +27,7 @@ public class QuickpropBehaviour extends AbstractBehaviour {
     private double stepSize;
     private double maxStepSize;
     private double weightDecay;
+    private double sign;
 
     /**
      * Default constructor assigns standard position and velocity provider.
@@ -61,8 +62,6 @@ public class QuickpropBehaviour extends AbstractBehaviour {
      */
     @Override
     public Entity performIteration(Entity entity) {
-
-        double sign = (AbstractAlgorithm.get().getOptimisationProblem() instanceof Maximise) ? 1 : -1;
 
         Vector oldPosition = (Vector) entity.get(Property.PREVIOUS_SOLUTION);
         Vector curPosition = (Vector) entity.getPosition();
@@ -118,5 +117,9 @@ public class QuickpropBehaviour extends AbstractBehaviour {
     
     public void setWeightDecay(double weightDecay) {
         this.weightDecay = weightDecay;
+    }
+
+    public void setSign(double sign) {
+        this.sign = sign;
     }
 }
