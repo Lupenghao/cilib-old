@@ -10,8 +10,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import net.sourceforge.cilib.algorithm.AbstractAlgorithm;
+import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm;
+import net.sourceforge.cilib.entity.initialisation.MaskedInitialisationStrategy;
 import net.sourceforge.cilib.nn.architecture.builder.CascadeArchitectureBuilder;
 import net.sourceforge.cilib.nn.architecture.builder.LayerConfiguration;
 import net.sourceforge.cilib.nn.architecture.visitors.CascadeVisitor;
@@ -24,6 +27,7 @@ import net.sourceforge.cilib.problem.Problem;
 import net.sourceforge.cilib.problem.solution.Fitness;
 import net.sourceforge.cilib.problem.solution.InferiorFitness;
 import net.sourceforge.cilib.problem.solution.OptimisationSolution;
+import net.sourceforge.cilib.pso.particle.AbstractParticle;
 import net.sourceforge.cilib.type.types.container.Vector;
 import net.sourceforge.cilib.type.types.Numeric;
 import net.sourceforge.cilib.type.types.Real;
@@ -70,6 +74,11 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         problem.initialise();
         
         NeuralNetwork network = problem.getNeuralNetwork();
+		Vector trackedWeights = network.getWeights();
+		for (int curElement = 0; curElement < trackedWeights.size(); ++curElement) {
+			trackedWeights.set(curElement, Real.valueOf(Double.NaN));
+		}
+		network.setWeights(trackedWeights);
         
         phase1Problem.setNeuron(neuronPrototype);
         phase1Problem.setTrainingSet(problem.getTrainingSet());
@@ -118,7 +127,8 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         alg1.performInitialisation();
         alg1.runAlgorithm();
 
-        List<OptimisationSolution> solutions = Lists.<OptimisationSolution>newLinkedList(alg1.getSolutions());
+        //List<OptimisationSolution> solutions = Lists.<OptimisationSolution>newLinkedList(alg1.getSolutions());
+        List<OptimisationSolution> solutions = Arrays.asList(alg1.getBestSolution());
 
         List<LayerConfiguration> layers = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations();
 
@@ -138,6 +148,12 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
             }
         }
 
+        //reset bias weight in output layer
+        /*if (layers.get(0).isBias()) {
+            int index = layers.get(0).getSize();
+            trackedWeights.setReal(insertionIndex + index, Double.NaN);
+        }*/
+
         insertionIndex += consolidatedLayerSize;
         for (int curOutput = 0; curOutput < layers.get(layers.size()-1).getSize(); ++curOutput) {
             for (int curSolution = 0; curSolution < solutions.size(); ++curSolution) {
@@ -146,7 +162,7 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
 
             insertionIndex += solutions.size() + consolidatedLayerSize;
         }
-        
+     
         //expand neural network
         LayerConfiguration targetLayerConfiguration = new LayerConfiguration(solutions.size(), neuronPrototype.getActivationFunction(), false);
         network.getArchitecture().getArchitectureBuilder().addLayer(layers.size()-1, targetLayerConfiguration);
@@ -164,10 +180,17 @@ public class CascadeCorrelationAlgorithm extends AbstractAlgorithm {
         NNTrainingProblem problem = (NNTrainingProblem) optimisationProblem;
         NeuralNetwork network = problem.getNeuralNetwork();
         Vector trackedWeights = network.getWeights();
-        
-        AbstractAlgorithm alg2 = (AbstractAlgorithm) phase2Algorithm.getClone();
-        
+
         phase2Problem.initialise();
+
+		int nrOfOutputWeights = ((Vector) phase2Problem.getDomain().getBuiltRepresentation()).size();
+		Vector.Builder maskBuilder = Vector.newBuilder();
+		for (int curElement = trackedWeights.size()-nrOfOutputWeights; curElement < trackedWeights.size(); ++curElement) {
+			maskBuilder.add(trackedWeights.get(curElement));
+		}
+        
+        SinglePopulationBasedAlgorithm alg2 = (SinglePopulationBasedAlgorithm) phase2Algorithm.getClone();
+		((AbstractParticle) alg2.getInitialisationStrategy().getEntityType()).setPositionInitialisationStrategy(new MaskedInitialisationStrategy(maskBuilder.build()));
 
         alg2.setOptimisationProblem(phase2Problem);
         alg2.performInitialisation();

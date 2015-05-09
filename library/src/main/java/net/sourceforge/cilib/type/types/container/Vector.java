@@ -476,6 +476,14 @@ public class Vector implements StructuredType<Numeric>,
         return this.multiply(1.0 / scalar);
     }
 
+    public final Vector divide(Vector other) {
+        Vector result = this.getClone();
+        for (int i = 0; i < other.size(); i++) {
+            result.setReal(i, this.doubleValueOf(i) / other.doubleValueOf(i));
+        }
+        return result;
+    }
+
     /**
      * {@inheritDoc}
      */

@@ -92,7 +92,7 @@ public class Sigmoid extends ActivationFunction {
      */
     @Override
     public double getGradient(double number) {
-        return number * (1 - number);
+        return f(number) * (1 - f(number));
     }
 
     /**

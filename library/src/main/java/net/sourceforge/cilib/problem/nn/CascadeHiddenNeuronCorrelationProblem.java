@@ -16,6 +16,7 @@ import net.sourceforge.cilib.nn.architecture.visitors.OutputErrorVisitor;
 import net.sourceforge.cilib.nn.NeuralNetwork;
 import net.sourceforge.cilib.problem.objective.Maximise;
 import net.sourceforge.cilib.problem.solution.MaximisationFitness;
+import net.sourceforge.cilib.problem.DifferentiableProblem;
 import net.sourceforge.cilib.type.StringBasedDomainRegistry;
 import net.sourceforge.cilib.type.types.Type;
 import net.sourceforge.cilib.type.types.container.Vector;
@@ -26,7 +27,7 @@ import net.sourceforge.cilib.type.types.container.Vector;
  * correlation between the activation of the candidate neuron and the output
  * errors of the cascade network is a fitness that needs to be maximised.
  */
-public class CascadeHiddenNeuronCorrelationProblem extends NNTrainingProblem {
+public class CascadeHiddenNeuronCorrelationProblem extends NNTrainingProblem implements DifferentiableProblem {
 
     private Neuron neuron;
     private ArrayList<Layer> activationCache;
@@ -131,6 +132,69 @@ public class CascadeHiddenNeuronCorrelationProblem extends NNTrainingProblem {
         }
 
         return new MaximisationFitness(correlation);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * The gradient is determined using the batch-learning rule.
+     * The gradient is calculated by the equation provided in "The cascade-
+     * correlation learning architecture" by Fahlman and Lebiere.
+     */
+    public Vector getGradient(Vector solution) {
+        Vector.Builder gradientBuilder = Vector.newBuilder();
+
+        neuron.setWeights(solution);
+
+        //calculate activation
+        double[] activations = new double[trainingSet.size()];
+        for (int curPattern = 0; curPattern < activationCache.size(); ++curPattern) {
+            //Feed consolidated layers to new neuron.
+            //The receiving Neuron must ensure that it doesn't process more inputs
+            //than what it has weights for.
+            activations[curPattern] = neuron.calculateActivation(activationCache.get(curPattern));
+        }
+        
+        //calculate means
+        double totalActivation = activations[0];
+        for (int curPattern = 1; curPattern < trainingSet.size(); ++curPattern) {
+            totalActivation += activations[curPattern];
+        }
+        double meanActivation = totalActivation / trainingSet.size();
+
+        //calculate activation function gradients
+        double[] afGradients = new double[trainingSet.size()];
+        for (int curPattern = 0; curPattern < activationCache.size(); ++curPattern) {
+            //calculate net-input
+            double netin = 0.0;
+            for (int curWeight = 0; curWeight < neuron.getWeights().size(); ++curWeight) {
+                netin += neuron.getWeights().doubleValueOf(curWeight) * activationCache.get(curPattern).get(curWeight).getActivation();
+            }
+            afGradients[curPattern] = neuron.getActivationFunction().getGradient(netin);
+        }
+
+        for (int curWeight = 0; curWeight < solution.size(); ++curWeight) {
+            double gradient = 0.0;
+            for (int curOutput = 0; curOutput < errorMeans.size(); ++curOutput) {
+                //calculate correlation
+                double correlation = 0.0;
+                for (int curPattern = 0; curPattern < trainingSet.size(); ++curPattern) {
+                    correlation += (activations[curPattern] - meanActivation)
+                             * (errorCache.get(curPattern).get(curOutput).doubleValue() - errorMeans.get(curOutput).doubleValue());
+                }
+                double correlationSign = (correlation < 0) ? -1 : 1;
+
+                //calculate gradient
+                for (int curPattern = 0; curPattern < trainingSet.size(); ++curPattern) {
+                    gradient += correlationSign
+                            * (errorCache.get(curPattern).get(curOutput).doubleValue() - errorMeans.get(curOutput).doubleValue())
+                            * afGradients[curPattern] * activationCache.get(curPattern).get(curWeight).getActivation();
+                }
+            }
+            gradientBuilder.add(gradient / trainingSet.size());
+        }
+
+        return gradientBuilder.build();
     }
 
     /**
